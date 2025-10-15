@@ -1,0 +1,1014 @@
+----------------------------------------------------------------------------------------------------------------
+--Configuracion de proyecto django MVT--
+----------------------------------------------------------------------------------------------------------------
+1.
+
+-Correr el projecto:
+python manage.py runserver
+
+----------------------------------------------------------------------------------------------------------------
+2.
+
+-Crear entorno virtual:
+python -m venv env
+
+----------------------------------------------------------------------------------------------------------------
+3.
+
+-Activar entorno virtual:
+env\Scripts\activate o .venv \Scripts\activate (asegurase del nombre de la ruta dentro del entorno virtual)
+
+----------------------------------------------------------------------------------------------------------------
+4.
+
+-Instalar django:
+pip install django
+
+----------------------------------------------------------------------------------------------------------------
+5.
+
+-Crear projecto:
+django-admin startproject nombre_proyecto . (recordar el punto)
+
+----------------------------------------------------------------------------------------------------------------
+6.
+
+---Crear app:---
+
+django-admin startapp nombre_app o python manage.py startapp nombre_app
+
+---------------------------------------------------------------------------------------------------------------
+7.
+
+-Luego registramos la app creada en setting.py/INSTALLED_APPS
+
+---------------------------------------------------------------------------------------------------------------
+8.
+
+-Creamos las vistas app/views.py (aqui va el crud) y añadimos:
+
+# Create your views here.
+from app.models import Empleado
+from django.shortcuts import render, redirect
+from . import forms
+
+
+def index(request):
+    form =forms.EmpleadoForm()
+    if request.method=='POST':
+        form=forms.EmpleadoForm(request.POST)
+        if form.is_valid():
+            print("Formulario OK")
+            print("Nombre: ",form.cleaned_data['nombre'])
+            #ver información procesada desde el form
+            form.save()
+            return listar_empleados(request)
+    data={'form':form}
+    return render(request,'modelApp/index.html',data)
+
+
+def listar_empleados(request):
+    empleados = Empleado.objects.all()
+    print(f"Empleados: {empleados}")  # Debugging print
+    data = {'empleados': empleados}
+    return render(request, 'modelApp/empleados.html', data)
+
+
+def editar_empleado(request, id):
+    empleado = Empleado.objects.get(id=id)  # Buscar el registro a editar
+    form = forms.EmpleadoForm(instance=empleado)
+    if request.method == 'POST':
+        form = forms.EmpleadoForm(request.POST, instance=empleado)
+        if form.is_valid():
+            form.save()  # Aquí actualiza el registro en lugar de crear uno nuevo
+            return listar_empleados(request)  # redirect('employee_list')
+    else:
+        data = {'form': form}
+        return render(request, 'modelApp/index.html', data)
+
+
+def eliminar_empleado(request, id):
+    empleado = Empleado.objects.get(id=id)
+    empleado.delete()
+    return redirect('trabajadores:empleados')
+
+----------------------------------------------------------------------------------------------------------------
+9.
+
+-Luego de agregar el crud de la vista de nuestra app, añadimos las url en app, app/urls.py
+
+from django.urls import path
+from . import views
+
+app_name="trabajadores"
+
+urlpatterns = [
+    path('', views.index, name='agregar'),
+    path('empleados/', views.listar_empleados, name="empleados"),
+    path('actualizarEmpleado/<int:id>', views.editar_empleado, name="editar"),
+    path('eliminarEmpleado/<int:id>', views.eliminar_empleado, name="eliminar"),
+]
+
+
+----------------------------------------------------------------------------------------------------------------
+10.
+
+-En admin.py:
+
+from django.contrib import admin
+from django.urls import path, include #se añade include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('',include('app.urls')), #se añade la url del proyecto
+]
+----------------------------------------------------------------------------------------------------------------
+11.
+
+-Ahora creamos la carpeta templates para los archivos en app:
+ debe ser asi:
+nombre_app/template/nombre_app/index.html
+
+-y una carpeta template global para el archivo base.html
+
+
+----------------------------------------------------------------------------------------------------------------
+12.
+
+-En models.py.
+
+#Django funciona con un ORM (Object Relational Mapper), lo que significa que 
+#describes tu modelo en Python y automáticamente Django genera las tablas y 
+#columnas en la base de datos,
+#cada clase en models.py se convierte en una table en la base de datos, 
+#esta se llamara automaticamente nombreapp_nombreclase
+
+from django.db import models
+
+# Create your models here.
+
+
+class Empleado(models.Model):
+    nombre= models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    telefono = models.CharField(max_length=20, blank=True)
+
+    def __str__(self):
+        return f"{self.nombre} - {self.email}"
+
+
+----------------------------------------------------------------------------------------------------------------
+13.
+
+-En admin.py 
+
+#El django admin es un panel web que se genera automáticamente para gestionar 
+#los modelos de tu aplicación sin que tengas que programar todo el CRUD desde 
+#cero.Cuando defines un modelo (ej. Empleado ), debes registrarlo en app/admin.py para que
+#aparezca en el panel de administración:
+
+from django.contrib import admin
+from .models import Empleado
+
+# Register your models here.
+@admin.register(Empleado)
+class EmpleadoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'email', 'telefono')
+    search_fields = ('nombre', 'email')
+
+----------------------------------------------------------------------------------------------------------------
+14.
+
+-Configura la ruta de los templates:
+
+#Para que Django reconozca tanto el directorio de templates global como 
+#los templates dentro de las aplicaciones, En settings.py:
+
+(lo posicionamos bajo BASE_DIR)
+
+#configuracion de ruta de los templates
+import os
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+____________________________________________________________________
+14.1
+
+-añadir en TEMPLATES DIRS:
+ 
+'DIRS': [TEMPLATES_DIR], #aqui agregamos la configuracion de ruta de los templates
+
+OPTIONS: 'django.template.context_processors.static', #para archivos estaticos
+
+____________________________________________________________________
+14.2
+
+-ahora añadimos la configuracion de archivos estaticos:
+
+#Configuracion de archivos estaticos
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")] #directorio donde buscar archivos estaticos
+
+
+
+----------------------------------------------------------------------------------------------------------------
+15.
+
+-Crear requirements.txt (esto es como un node install):
+
+pip freeze -> requirements.txt(cmd)
+pip freeze > requirements.txt(powershell)
+pip install -r requirements.txt (necesario)
+pip list (para mostrar lo instalado)
+
+nota: tener cuidado que no se instale global(si sucede eso volvemos a crear el entorno virtual)
+
+y añadimos:
+
+asgiref==3.9.2
+cffi==2.0.0
+cryptography==45.0.7
+Django==5.2.6
+pycparser==2.23
+PyMySQL==1.1.2
+sqlparse==0.5.3
+tzdata==2025.2
+python-dotenv==1.1.1
+
+----------------------------------------------------------------------------------------------------------------
+16.
+
+-Creamos un .gitignore con:
+
+venv
+.venv
+__pycache__/
+*sqlite3
+*.__pycache__
+.vscode/
+.idea/
+.DS_Store
+
+----------------------------------------------------------------------------------------------------------------
+17.
+
+CONECCION A BASE DE DATOS:
+
+-Creamos un .env que contendra la coneccion a la db y añadimos:
+
+# DB (Railway)
+MYSQL_HOST=centerbeam.proxy.rlwy.net
+MYSQL_PORT=53812
+MYSQL_DATABASE=railway
+MYSQL_USER=root
+MYSQL_PASSWORD=eiVTqDLuUADCjGQjeFjKcknUavshLGQj
+
+
+# Django
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+SECRET_KEY=django-insecure-p0qdcual2urlw&mtw7f-h6d@xv2!0lb@6)v$hxk(-ie1thi6&2
+USE_PYMYSQL=1
+
+
+----------------------------------------------------------------------------------------------------------------
+18.
+
+-Y debemos Configurar settings.py (Django + PyMySQL + .env):
+
+A)cargar las variables de entorno desde .env:
+(lo posicionamos bajo TEMPLATES_DIR)
+
+#pip install python-dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR, ".env"))
+except Exception:
+    pass
+
+
+__________________________________________________________________
+y esto.(posicion normal)
+
+SECRET_KEY = os.getenv("SECRET_KEY", "inseguro_para_dev")
+DEBUG = os.getenv("DEBUG","True")== "True"
+
+__________________________________________________________________
+
+B)Usar PyMySQL:
+
+-(lo posicionamos abajo de dotenv)
+
+#pip install pymysql
+if os.getenv("USE_PYMYSQL", "0") == "1":
+ import pymysql
+ pymysql.install_as_MySQLdb()
+
+
+-(posicion normal)
+
+DATABASES = {
+    'default': {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("MYSQL_DATABASE"),  # Use MYSQL_DATABASE
+        "USER": os.getenv("MYSQL_USER"),      # Use MYSQL_USER
+        "PASSWORD": os.getenv("MYSQL_PASSWORD"),  # Use MYSQL_PASSWORD
+        "HOST": os.getenv("MYSQL_HOST"),      # Use MYSQL_HOST
+        "PORT": int(os.getenv("MYSQL_PORT", "3306")),  # Convert to integer
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        **(
+            {"ssl": {"ca": os.getenv("MYSQL_SSL_CA")}}
+            if os.getenv("MYSQL_SSL_CA")
+            else {}
+            ),    
+        },
+    }
+}
+
+----------------------------------------------------------------------------------------------------------------
+19.
+
+-Creamos una carpeta para los archivos estaticos- static/ -css/ -js/ -imagenes/
+
+
+----------------------------------------------------------------------------------------------------------------
+20.
+
+-Creamos el archivo base.html
+
+(esto es solo explicacion)
+Cargar archivos estáticos en los templates En base.html , ya hemos incluido {% load static %}
+y enlazado el CSS
+
+
+----------------------------------------------------------------------------------------------------------------
+21.
+
+--Validaciones--
+
+-creamos el archivo forms.py en la app
+
+
+c) ModelForm con validaciones y Bootstrap.
+
+#En Django, un form es una CLASE que genera automáticamente un formulario HTML,
+#basado en un modelo de tu aplicación.
+#Tenemos un modelo empleado , el ModelForm crea los campos nombre , email ,  telefono. con sus 
+#validaciones básicas sin que tengas que escribir todo a mano.
+#Puedes añadir validaciones extra y personalizar los
+#widgets (inputs, selects, etc.)para aplicar estilos como Bootstrap.
+
+from django import forms
+from django.core import validators
+from app.models import Empleado # importa tu modelo
+
+class EmpleadoForm(forms.ModelForm):
+    class Meta:
+        model = Empleado
+        fields = ['nombre', 'telefono', 'email']
+        widgets = {
+        'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+        'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+        'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+    # Validadores extra que no estén definidos en el modelo
+        nombre = forms.CharField(
+        min_length=5,
+        max_length=20,
+        validators=[
+        validators.MinLengthValidator(5),
+        validators.MaxLengthValidator(20),
+        ],
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+        )
+def clean_nombre(self):
+    inputNombre = self.cleaned_data['nombre']
+    if inputNombre == "Leo":
+        raise forms.ValidationError("No se aceptan más Pudus")
+    return inputNombre
+
+
+----------------------------------------------------------------------------------------------------------------
+
+22.
+
+--Migraciones--
+
+-No necesitas crear tablas manualmente; Django lo hará con migrate.
+
+ejecutamos en powershell:
+
+ python manage.py makemigrations
+ python manage.py migrate
+
+----------------------------------------------------------------------------------------------------------------
+23.
+
+--Inicio de admin--
+
+-creacion de superusuario para el panel admin
+ python manage.py createsuperuser
+
+ #ingresa usuario/clave para entrar al /admin
+
+----------------------------------------------------------------------------------------------------------------
+24. 
+
+--Django RestFramework(API)--
+
+-Creamos dentro de app un archivo serializers.py
+
+#hasta el momento hemos trabajado con una vista tradicional - estas vistas trabajan con formularios html
+#no con API, Para trabajar un crud con API usamos djangorestframework, sus funciones no usan html si no
+#que envian y reciben datos JSON.
+
+#convertir los datos de un modelo a formato JSON y viceversa
+
+#pip install djangorestframework
+from rest_framework import serializers
+from app.models import Empleado
+
+class EmpleadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Empleado
+        fields='__all__'
+
+
+----------------------------------------------------------------------------------------------------------------
+25.
+
+-y lo usamos en la vista
+
+#debemos usar una logica diferente en el crud
+
+"""
+Vista tradicional: el crud funciona con formularios HTML
+Se usan cuando:
+	-Tu aplicación tiene interfaz web renderizada por Django (HTML generado en el servidor).
+ 	 Ejemplo: un sistema interno, un panel de administración, o una web pequeña sin frontend separado.
+
+Características:
+	-Usas forms.py y render() para mostrar páginas.
+	-Interactúas directamente desde el navegador (no usas JSON). """
+
+"""
+Vista API: el crud funciona con formularios JSON
+
+Se usan cuando:
+	-Quieres construir una API REST que devuelva JSON.
+	-Tu frontend está hecho con React, Vue, Angular, Flutter, etc.
+	-O si necesitas que otras aplicaciones consuman tus datos. 
+Características:
+	-Usas serializers.py para transformar modelos a JSON.
+	-Las vistas usan @api_view o ViewSets. """
+
+codigo:
+
+""" Vista API para el formulario de empleados"""
+from .serializers import EmpleadoSerializer
+from .models import Empleado
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.decorators import api_view,permission_classes
+from rest_framework.permissions import IsAuthenticated
+
+@api_view(['GET','POST'])
+def lista_empleados(request):
+    if request.method=='GET':
+        empleados=Empleado.objects.all()
+        serializer=EmpleadoSerializer(empleados,many=True)
+        return Response(serializer.data)
+
+    if request.method=='POST':
+        serializer=EmpleadoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET','PUT','DELETE'])
+def detalle_empleado(request,pk):
+    try:
+        empleado=Empleado.objects.get(pk=pk)
+    except Empleado.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method=='GET':
+        serializer=EmpleadoSerializer(empleado)
+        return Response(serializer.data)
+    
+    if request.method=='PUT':
+        serializer=EmpleadoSerializer(empleado,data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    if request.method=='DELETE':
+        empleado.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+----------------------------------------------------------------------------------------------------------------
+26. 
+
+-Y en urls.py del app 
+ 
+from django.urls import path
+from . import views
+from . import api_views
+
+app_name="trabajadores"#namespace de la appm, para evitar conflictos entre apps, se usa en el template con {% url 'namespace:name' %},
+                       #ejemplo: {% url 'trabajadores:empleados' %}
+
+urlpatterns = [
+    # Rutas para las vistas tradicionales
+    path('', views.index, name='agregar'),
+    path('empleados/', views.listar_empleados, name="empleados"),
+    path('actualizarEmpleado/<int:id>', views.editar_empleado, name="editar"),
+    path('eliminarEmpleado/<int:id>', views.eliminar_empleado, name="eliminar"),
+
+    # Rutas para la API
+    path('empleados/', api_views.lista_empleados, name='lista_empleados'),
+    path('empleados/<int:pk>/', api_views.detalle_empleado, name='detalle_empleado'),
+]
+
+
+
+----------------------------------------------------------------------------------------------------------------
+27.
+
+--Coneccion a un Frontend con la API nativa de JavaScripts llamada fetch()--
+
+¿Qué hace fetch()?
+fetch() es una función incorporada en JavaScript (no necesitas instalar nada) 
+que te permite enviar peticiones HTTP (GET, POST, PUT, DELETE, etc.) a un servidor.
+
+***Cuidado con el CORS***
+
+Si tu frontend (React) y backend (Django) corren en diferentes puertos (3000 y 8000), 
+debes tener el paquete django-cors-headers configurado en Django para permitir la conexión.
+
+#pip install django-cors-headers
+
+-Y en settings.py del projecto añadimos:
+
+-En INSTALLED_APPS:
+'rest_framework',
+
+-En MIDDLEWARE: 
+'corsheaders.middleware.CorsMiddleware', #middleware de CORS
+
+-al final de todo añadir:
+
+CORS_ALLOW_ALL_ORIGINS = True 
+
+# O para especificar dominios(ej:react)
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+---------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+28.
+
+--Ahora debemos crear el crud en frontend--
+
+ej react: 
+
+	componentes/
+	UserForm.jsx
+	UserList.jsx
+app.jsx
+
+
+----------------------------------------------------------------------------------------------------------------
+29.
+
+--Coneccion a un Frontend con la libreria Axios--
+
+========================================
+COMPARACIÓN CRUD DJANGO vs CRUD AXIOS
+========================================
+
+Aspecto               | CRUD con Django tradicional              | CRUD con Axios (API + DRF)
+------------------------------------------------------------------------------------------------
+Arquitectura          | Monolítico: servidor renderiza HTML      | Tipo microservicio/API: backend expone datos,
+                      |                                          | frontend los consume con JS
+------------------------------------------------------------------------------------------------
+Recarga de página     | Sí, al enviar formularios                | No, usa AJAX/Fetch → experiencia fluida
+                      |                                          | (similar a un SPA)
+------------------------------------------------------------------------------------------------
+Curva de aprendizaje  | Más sencillo para empezar                | Más complejo: requiere API + Serializers + JS
+------------------------------------------------------------------------------------------------
+Escalabilidad         | Ideal para apps pequeñas o medianas      | Mejor para SPAs, móviles o frontends modernos
+------------------------------------------------------------------------------------------------
+Flexibilidad          | Limitado a formularios y vistas Django   | Dinámico: consume API desde React, Vue, Angular, etc.
+------------------------------------------------------------------------------------------------
+Reutilización         | Difícil reutilizar fuera del proyecto    | API reutilizable por web, móvil u otros sistemas
+------------------------------------------------------------------------------------------------
+
+-Cambiaremos la estructura, dentro de app crearemos una carpeta llamada api que contrendra:
+
+serializers.py(se mantiene igual)
+urls.py(se mantiene igual(version_api)
+views.py
+
+-ya hicimos la vista con decoradores(version manual),
+ ahora usaremos una version mas compacta que utiliza viewsets.ModelViewSet(version automatica)
+
+Qué hace?
+ModelViewSet es una clase genérica y completa que:
+-Automáticamente implementa los métodos list, retrieve, create, update, partial_update y destroy.
+-Ya incluye soporte para todos los métodos HTTP (GET, POST, PUT, PATCH, DELETE).
+-Se usa junto con routers, que generan las rutas automáticamente.	
+__________________________________________________________________________________________________
+29.1
+
+-Entonces en views.py
+
+from rest_framework import viewsets
+from app.models import Producto
+from app.api.serializers import ProductoSerializer
+
+class ProductoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.all()
+    serializer_class = ProductoSerializer
+___________________________________________________________________________________________________
+
+29.2
+
+-Y en el frontend(ej:react) Creamos dentro de src una carpeta llamada API que contendra
+ el JavaScript con la coneccion a la API 
+
+-src/api/products.js
+
+
+import axion from 'axios'
+
+const productsApi = axion.create({
+  baseURL: 'http://127.0.0.1:8000/api/producto/'
+})
+
+export const getProducts = () => productsApi.get()
+export const getProduct = (id) => productsApi.get(`/${id}/`)
+export const createProduct = (product) => productsApi.post('/', product)
+export const updateProduct = (id, product) => productsApi.put(`/${id}/`, product)
+export const deleteProduct = (id) => productsApi.delete(`/${id}/`)
+
+
+
+#añadimos a requirements.txt
+djangorestframework==3.16.1
+
+______________________________________________________________________________________________________
+
+-En admin.py 
+
+from django.contrib import admin
+from app.models import Producto
+# Register your models here.
+
+admin.site.register(Producto)
+
+----------------------------------------------------------------------------------------------------------------
+Recapitulando:
+#tenemos diferentes formas de estructurar un projecto.
+1- crud js con templates html
+2- crud js con api rest
+3- crud axios con api rest
+
+
+
+----------------------------------------------------------------------------------------------------------------
+
+--autenticacion JWT(JSON WEB TOKEN)--
+
+Estas API exponen funcionalidades del servidor mediante URL públicas,
+lo que significa que cualquier usuario que conozca la dirección podría 
+intentar interactuar con los recursos sin autorización.
+Esto hace que el control de accesos sea esencial para proteger la 
+integridad de la información y la confianza del usuario. 
+
+Django es un framework web completo, pensado originalmente para aplicaciones con sesiones, 
+plantillas HTML y autenticación mediante cookies y sesiones de usuario.
+Django tradicionalmente mantiene estado entre peticiones (es stateful).
+
+Por ejemplo:
+-Cuando haces login con django.contrib.auth, Django crea una sesión en el servidor.
+-Esa sesión se guarda en la base de datos o en caché (django_session).
+-El navegador guarda una cookie de sesión, y Django la usa para recordar quién eres.
+
+Estructura de un JWT
+
+-Header: tipo de token y algoritmo
+-Payload: Informacion de usuario y roles
+-Signature: Asegura integridad y autencidad
+
+Arquitectura REST
+
+Qué es REST y stateless
+
+REST (Representational State Transfer) es un estilo de arquitectura para diseñar servicios web.
+Define un conjunto de principios para que las APIs sean simples, escalables y mantenibles.
+
+Algunas de sus reglas principales son:
+
+-Usa HTTP y sus métodos (GET, POST, PUT, DELETE, etc.).
+-Utiliza recursos representados por URLs.
+-Emplea formatos estándar como JSON o XML.
+-Debe ser stateless (sin estado).
+
+Qué significa Stateless
+
+Stateless significa que el servidor no guarda información de sesión entre una petición y la siguiente.
+Cada petición del cliente debe contener toda la información necesaria para ser procesada.
+Ejemplo:
+Si haces una petición GET /usuarios/5, el servidor no recuerda si estás autenticado de antes.
+Debes enviar el token o credenciales en cada solicitud.
+
+-Django vanilla(sin DRF)		 -Stateful	-Guarda sesión en servidor
+-Django RF SessionAuthentication	 -Stateful	-No REST puro
+-Django REST Framework con JWT/Token	 -Stateless	-RESTful
+
+____________________________________________________________________________________
+---instalacion--
+
+#pip install djangorestframework-simplejwt
+____________________________________________________________________________________
+
+-configuracion en settings.py.
+
+-agrega la clase de autentificación JWT en la configuración de DRF:
+(al final de settings)
+
+#pip install djangorestframework-simplejwt
+#Esto indica que todas las solicitudes a la API deben usar JWT para autenticación.
+REST_FRAMEWORK = { 
+    'DEFAULT_AUTHENTICATION_CLASSES': ( 
+       'rest_framework_simplejwt.authentication.JWTAuthentication', 
+    ) 
+} 
+
+_____________________________________________________________________________________
+
+-configuracion de rutas en urls.py
+
+importa las vistas de SimpleJWT y define las rutas necesarias:
+
+from django.urls import path 
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView 
+
+urlpatterns = [ 
+	
+    #Rutas para JWT
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),#permite obtener un token enviando usuario y contraseña.
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),#permite refrescar un token antes de que expire.
+] 
+
+_______________________________________________________________________________________
+
+--Uso de IsAuthenticated--
+
+-en crud de views.py
+La clase de permisos más común es IsAuthenticated, que garantiza que solo usuarios autenticados 
+puedan acceder a la vista,Cualquier intento de acceder a la vista sin un token válido será rechazado.
+El servidor devolverá un error 401 Unauthorized para solicitudes no autenticadas.
+
+
+from rest_framework.permissions import IsAuthenticated 
+from rest_framework import viewsets 
+from .models import Producto 
+from .serializers import ProductoSerializer 
+
+class ProductoViewSet(viewsets.ModelViewSet): 
+    queryset = Producto.objects.all() 
+    serializer_class = ProductoSerializer 
+    permission_classes = [IsAuthenticated]
+
+
+-Y en settings.py 
+
+REST_FRAMEWORK = { 
+    'DEFAULT_PERMISSION_CLASSES': ( 
+        'rest_framework.permissions.IsAuthenticated', 
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': ( 
+       'rest_framework_simplejwt.authentication.JWTAuthentication', 
+    ) 
+} 
+
+
+----------------------------------------------------------------------------------------------------------------
+
+---PRUEBAS UNITARIAS---
+
+#pip install pytest-django
+
+-creamos un archivo llamado pytest.ini
+y añadimos:
+
+DJANGO_SETTINGS_MODULE = app.settings
+python_files = tests.py test_*.py *_tests.py
+
+_______________________________________________________________________________________________
+y dentro de app creamos una carpeta llamada test con un archivo
+asociado al modelo que queremos ejecutar las prueba unitarias.
+Dentro de este archivo escribiremos el código de la prueba que realizaremos al
+modelo
+
+-test_empleado.py
+
+
+"""Pruebas unitarias del modelo :class:`Empleado` del proyecto Django.
+Cada prueba describe los comportamientos esperados del modelo para facilitar
+su mantenimiento. 
+Se utilizan fixtures y validaciones explícitas con ``full_clean`` para asegurar 
+que los campos cumplen con las restricciones definidas en el modelo."""
+
+import pytest
+from django.core.exceptions import ValidationError
+from app.models import Empleado
+
+@pytest.fixture
+def empleado_base():
+ """Crea un ``Empleado`` representativo para pruebas de representación."""
+ return Empleado(nombre="Cristina", email="cristina@example.com", fono="123456")
+
+@pytest.mark.django_db
+def test_creacion_minima_y_guardado():
+ """Verifica que se pueda crear y guardar un empleado con los campos mínimos."""
+ emp = Empleado.objects.create(
+ nombre="Ana",
+ email="ana@example.com",
+ fono="987654",
+ )
+ assert emp.id is not None
+ assert emp.nombre == "Ana"
+ assert emp.email == "ana@example.com"
+ assert emp.fono == "987654"
+
+@pytest.mark.django_db
+def test_str_representation(empleado_base):
+ """Comprueba la representación en cadena del empleado."""
+ # __str__ -> "nombre (email)"
+ assert str(empleado_base) == "Cristina (cristina@example.com)"
+
+@pytest.mark.django_db
+def test_fono_es_opcional():
+ """Permite guardar el modelo cuando ``fono`` no se proporciona."""
+ emp = Empleado(nombre="Luis", email="luis@example.com")
+ emp.full_clean() # Validación de modelo antes de guardar
+ emp.save()
+ assert Empleado.objects.filter(email="luis@example.com").exists()
+
+@pytest.mark.django_db
+def test_email_es_obligatorio():
+ """El campo ``email`` debe estar presente de lo contrario lanza error."""
+ emp = Empleado(nombre="Sin Email")
+ with pytest.raises(ValidationError) as exc:
+    emp.full_clean()
+ assert "email" in exc.value.message_dict
+
+@pytest.mark.django_db
+def test_formato_email_invalido():
+ """El campo ``email`` debe tener un formato válido."""
+ emp = Empleado(nombre="Mala", email="no-es-email")
+ with pytest.raises(ValidationError) as exc:
+    emp.full_clean() # EmailField valida formato
+ assert "email" in exc.value.message_dict
+
+@pytest.mark.django_db
+def test_max_length_nombre():
+ """Rechaza nombres que superen el ``max_length`` configurado."""
+ emp = Empleado(nombre="x" * 101, email="largo@example.com") # > max_length=100
+ with pytest.raises(ValidationError) as exc:
+    emp.full_clean()
+ assert "nombre" in exc.value.message_dict
+
+@pytest.mark.django_db
+def test_max_length_fono():
+ """Rechaza números telefónicos que excedan el tamaño máximo permitido."""
+ emp = Empleado(nombre="Juan", email="juan@example.com", fono="1" * 21)
+ with pytest.raises(ValidationError) as exc:
+    emp.full_clean()
+ assert "fono" in exc.value.message_dict
+
+@pytest.mark.django_db
+def test_email_no_es_unico_se_permite_duplicado():
+ """Confirma que ``email`` no tiene restricción de unicidad en el modelo."""
+ Empleado.objects.create(nombre="A", email="dup@example.com")
+ otro = Empleado(nombre="B", email="dup@example.com")
+ otro.full_clean()
+ otro.save()
+ assert Empleado.objects.filter(email="dup@example.com").count() == 2
+
+
+_____________________________________________________________________________________________
+Para realizar las prueba debemos crear otra base de datos de prueba asociando
+los privilegios al mismo usuario.
+
+-creacion de la base de datos DINAMICA.
+asociamos en el .env
+
+# DB Local
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=django2025
+MYSQL_USER=django2025user
+MYSQL_PASSWORD=123456
+
+
+# DB (Railway)
+MYSQL_HOST=metro.proxy.rlwy.net
+MYSQL_PORT=29710
+MYSQL_DATABASE=railway
+MYSQL_USER=root
+MYSQL_PASSWORD=IkfUexUMcEWggLCUGLqsWFMupBZYLeeA
+
+
+# Django
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+SECRET_KEY=django-insecure-p0qdcual2urlw&mtw7f-h6d@xv2!0lb@6)v$hxk(-ie1thi6&2
+USE_PYMYSQL=1
+ENV=development #can be development or production, # Cambia a "production" cuando despliegues
+
+
+_______________________________________________________________________________________________________
+
+-Y configuramos settings.py
+
+(añadimos abajo de pymysql)
+
+#Determinar entorno actual (local o producción)
+ENV = os.getenv("ENV", "local")
+
+__________________________________________
+(abajo de debug)
+
+# Permitir conexiones desde cualquier host en desarrollo, en producción especificar los hosts permitidos
+if ENV == "production":
+    ALLOWED_HOSTS = ["*"]  # o tu dominio Railway si lo prefieres
+else:
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+___________________________________________
+(y en databases)
+
+# Configuración dinámica de base de datos
+if ENV == "production":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.getenv("MYSQL_DATABASE_RAILWAY"),
+            "USER": os.getenv("MYSQL_USER_RAILWAY"),
+            "PASSWORD": os.getenv("MYSQL_PASSWORD_RAILWAY"),
+            "HOST": os.getenv("MYSQL_HOST_RAILWAY"),
+            "PORT": int(os.getenv("MYSQL_PORT_RAILWAY", "3306")),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.getenv("MYSQL_DATABASE"),  # Use MYSQL_DATABASE
+            "USER": os.getenv("MYSQL_USER"),      # Use MYSQL_USER
+            "PASSWORD": os.getenv("MYSQL_PASSWORD"),  # Use MYSQL_PASSWORD
+            "HOST": os.getenv("MYSQL_HOST"),      # Use MYSQL_HOST
+            "PORT": int(os.getenv("MYSQL_PORT", "3306")),  # Convert to integer
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            **(
+                {"ssl": {"ca": os.getenv("MYSQL_SSL_CA")}}
+                if os.getenv("MYSQL_SSL_CA")
+                else {}
+                ),    
+            },
+        }
+    }
+___________________________________________________________________________________________________________________
+
+
+-------------------------------------------------------------------------------------------------
+--SUPER USUARIO--
+
+python manage.py createsuperuser		
+
+
+----------------------------------------------------------------------------------------------------------------
+<!--Made By:       _     
+                  | |
+ _ __   _   _   __| | _   _
+|  _ \ | | | | / _  || | | |
+| |_) || |_| || (_| || |_| |
+|  __/  \__ _| \__ _| \__ _|
+| |
+|_| @Benjamin Maldonado -->
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
